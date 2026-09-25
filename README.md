@@ -39,10 +39,12 @@
 
 #### `calc/number_systems.py`
 
-- **Interactive number systems**: Menu-driven base, fixed-point, and floating-point conversion in the terminal; enter `x` to go back or exit.
+- **Interactive number systems**: Menu-driven base, fixed-point, floating-point, BCD, and Gray code conversion in the terminal; enter `x` to go back or exit.
 - **Base conversion**: Convert integers or decimals between bases 2, 8, 10, and 16 (non-terminating fractions end with `...`); source and target bases must differ.
 - **Fixed point (Ua.b / Qa.b)**: Choose unsigned `U` or two's-complement signed `Q`, then set integer bits `a` and fractional bits `b`; decimal ↔ fixed-point bit patterns (`a+b` binary bits, or hex / `0x`-prefixed hex of the same width).
 - **Floating point (IEEE 754 single precision)**: 32-bit layout (1 sign, 8 exponent, 23 fraction); decimal ↔ 32-bit binary or 8-digit hex.
+- **Binary coded decimal (8421 BCD)**: Non-negative decimal integers ↔ BCD bit patterns (one 4-bit nibble per decimal digit, 0–9 only); optional spaces or `0b` prefix on input.
+- **Gray code**: Binary ↔ reflected Gray code (bit width preserved); input accepts spaces or `0b` prefix.
 - **Input validation**: Invalid input is rejected with a retry prompt; after each conversion you can run another.
 
     ```shell

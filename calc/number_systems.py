@@ -218,6 +218,84 @@ def format_ieee754_single(bits: int) -> str:
     )
 
 
+def parse_non_negative_decimal_int(s: str) -> int | None:
+    value = parse_in_base(s.strip(), 10)
+    if value is None or value < 0:
+        return None
+    return value
+
+
+def decimal_to_bcd(n: int) -> str:
+    digits = str(n)
+    return " ".join(f"{int(d):04b}" for d in digits)
+
+
+def parse_bcd_bits(s: str) -> int | None:
+    compact = s.strip().replace(" ", "").replace("_", "")
+    if not compact:
+        return None
+    if compact.lower().startswith("0b"):
+        compact = compact[2:]
+    if not compact or len(compact) % 4 != 0:
+        return None
+    if any(ch not in "01" for ch in compact):
+        return None
+
+    digits: list[str] = []
+    for i in range(0, len(compact), 4):
+        nibble = int(compact[i : i + 4], 2)
+        if nibble > 9:
+            return None
+        digits.append(str(nibble))
+    return int("".join(digits))
+
+
+def format_bcd(n: int) -> str:
+    return f"{decimal_to_bcd(n)} (8421 BCD, one 4-bit digit per decimal digit)"
+
+
+def binary_to_gray(binary: str) -> str:
+    bits = binary.replace(" ", "")
+    if not bits:
+        return ""
+    gray = [bits[0]]
+    for i in range(1, len(bits)):
+        gray.append("1" if int(bits[i]) ^ int(bits[i - 1]) else "0")
+    return "".join(gray)
+
+
+def gray_to_binary(gray: str) -> str:
+    bits = gray.replace(" ", "")
+    if not bits:
+        return ""
+    binary = [bits[0]]
+    for i in range(1, len(bits)):
+        binary.append("1" if int(bits[i]) ^ int(binary[-1]) else "0")
+    return "".join(binary)
+
+
+def parse_binary_bits(s: str) -> str | None:
+    compact = s.strip().replace(" ", "").replace("_", "")
+    if not compact:
+        return None
+    if compact.lower().startswith("0b"):
+        compact = compact[2:]
+    if not compact or any(ch not in "01" for ch in compact):
+        return None
+    return compact
+
+
+def parse_gray_bits(s: str) -> str | None:
+    return parse_binary_bits(s)
+
+
+def parse_gray_to_binary(raw: str) -> str | None:
+    gray = parse_gray_bits(raw)
+    if gray is None:
+        return None
+    return gray_to_binary(gray)
+
+
 MAX_FIXED_WIDTH = 64
 
 
@@ -527,6 +605,100 @@ def call_ieee754_single_conversion():
                 print(f"{raw} -> {value} ({format_ieee754_single(bits)})")
 
 
+def call_bcd_conversion():
+    print("Binary coded decimal (8421 BCD): each decimal digit is encoded in 4 bits (0–9 per nibble).")
+    while True:
+        print("1. Decimal -> BCD")
+        print("2. BCD -> decimal")
+        print("x. Back / exit this step")
+        direction = input("Select conversion direction: ").strip()
+        if direction.lower() == "x":
+            return
+        if direction not in ("1", "2"):
+            print("Invalid choice. Enter 1, 2, or x.")
+            continue
+
+        if direction == "1":
+            print(
+                "Enter a non-negative decimal integer. "
+                "Enter x to go back."
+            )
+            while True:
+                entry = prompt_validated_input(
+                    "Decimal: ",
+                    parse_non_negative_decimal_int,
+                    "Invalid input. Enter a non-negative decimal integer.",
+                )
+                if entry is None:
+                    break
+                raw, value = entry
+                print(f"{raw} -> {format_bcd(value)}")
+        else:
+            print(
+                "Enter BCD as groups of 4 binary digits per decimal digit "
+                "(spaces optional), or 0b-prefixed bits. Enter x to go back."
+            )
+            while True:
+                entry = prompt_validated_input(
+                    "BCD: ",
+                    parse_bcd_bits,
+                    "Invalid input. Use only 0/1, length a multiple of 4, each nibble 0000–1001.",
+                )
+                if entry is None:
+                    break
+                raw, value = entry
+                print(f"{raw} -> {value} ({format_bcd(value)})")
+
+
+def call_gray_code_conversion():
+    print(
+        "Gray code (binary reflected): adjacent codewords differ by one bit; "
+        "convert between binary and Gray bit strings (bit width preserved)."
+    )
+    while True:
+        print("1. Binary -> Gray code")
+        print("2. Gray code -> binary")
+        print("x. Back / exit this step")
+        direction = input("Select conversion direction: ").strip()
+        if direction.lower() == "x":
+            return
+        if direction not in ("1", "2"):
+            print("Invalid choice. Enter 1, 2, or x.")
+            continue
+
+        if direction == "1":
+            print(
+                "Enter binary digits (spaces or 0b prefix optional). "
+                "Enter x to go back."
+            )
+            while True:
+                entry = prompt_validated_input(
+                    "Binary: ",
+                    parse_binary_bits,
+                    "Invalid input. Enter a valid binary bit string (0/1 only).",
+                )
+                if entry is None:
+                    break
+                raw, binary = entry
+                gray = binary_to_gray(binary)
+                print(f"{raw} -> {gray} (Gray code)")
+        else:
+            print(
+                "Enter Gray code as binary digits (spaces or 0b prefix optional). "
+                "Enter x to go back."
+            )
+            while True:
+                entry = prompt_validated_input(
+                    "Gray code: ",
+                    parse_gray_to_binary,
+                    "Invalid input. Enter a valid Gray code bit string (0/1 only).",
+                )
+                if entry is None:
+                    break
+                raw, binary = entry
+                print(f"{raw} -> {binary} (binary)")
+
+
 def call_base_conversion():
     from_base = prompt_base("Select source base (from): ")
     if from_base is None:
@@ -571,6 +743,8 @@ if __name__ == "__main__":
         print("1. Base conversion (integers or decimals)")
         print("2. Fixed point conversion")
         print("3. Floating point conversion (IEEE 754 single precision)")
+        print("4. Binary coded decimal (BCD)")
+        print("5. Gray code")
         print("x. Exit")
         choice = input("Enter your choice: ").strip()
         if choice == "1":
@@ -579,6 +753,10 @@ if __name__ == "__main__":
             call_fixed_point_conversion()
         elif choice == "3":
             call_ieee754_single_conversion()
+        elif choice == "4":
+            call_bcd_conversion()
+        elif choice == "5":
+            call_gray_code_conversion()
         elif choice.lower() == "x":
             print("Exiting...")
             break
